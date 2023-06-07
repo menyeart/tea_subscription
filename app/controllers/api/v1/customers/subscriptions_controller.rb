@@ -4,11 +4,8 @@ class Api::V1::Customers::SubscriptionsController < ApplicationController
     if subscription.save
       render json: SubscriptionSerializer.new(subscription), status: :created
     else
-      
+      render json: ErrorSerializer.new(subscription.errors), status: :bad_request
     end
-    end
-
-  
   end
 
 private
