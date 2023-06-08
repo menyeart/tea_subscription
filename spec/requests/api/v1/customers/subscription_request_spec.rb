@@ -6,7 +6,7 @@ RSpec.describe 'Subscriptions request', type: :request do
       tea_1 = create(:tea)
       customer_1 = create(:customer)
       data_keys = [:id, :type, :attributes]
-      attribute_keys = [:title, :price, :status, :frequency, :customer_id, :tea_id, :tea]
+      attribute_keys = [:title, :price, :status, :frequency, :customer_id, :tea_id, :tea_name]
       expect(Subscription.count).to eq(0)
 
       headers = { 'CONTENT_TYPE' => 'application/json' }
@@ -14,7 +14,6 @@ RSpec.describe 'Subscriptions request', type: :request do
         title: "A dance with Lady Grey",
         price: 100.00,
         frequency: "weekly",
-        customer_id: customer_1.id,
         tea_id: tea_1.id
       }
 
@@ -29,7 +28,6 @@ RSpec.describe 'Subscriptions request', type: :request do
       expect(subscription[:data][:attributes][:title]).to eq(params[:title])
       expect(subscription[:data][:attributes][:price]).to eq(params[:price].to_s)
       expect(subscription[:data][:attributes][:frequency]).to eq(params[:frequency])
-      expect(subscription[:data][:attributes][:customer_id]).to eq(params[:customer_id])
       expect(subscription[:data][:attributes][:tea_id]).to eq(params[:tea_id])
     end
 
@@ -64,7 +62,7 @@ RSpec.describe 'Subscriptions request', type: :request do
       customer_1 = create(:customer)
       subscription_1 = create(:subscription, tea_id: tea_1.id, customer_id: customer_1.id, status: 0)
       data_keys = [:id, :type, :attributes]
-      attribute_keys = [:title, :price, :status, :frequency, :customer_id, :tea_id, :tea]
+      attribute_keys = [:title, :price, :status, :frequency, :customer_id, :tea_id, :tea_name]
 
       expect(subscription_1[:status]).to eq("active")
 
@@ -107,6 +105,70 @@ RSpec.describe 'Subscriptions request', type: :request do
       expect(error[:errors].first[:status]).to eq("404")
       expect(error[:errors].first[:title]).to eq("Invalid Request")
       expect(error[:errors].first[:detail]).to eq(["'cancelle' is not a valid status"])
+    end
+  end
+
+  describe 'Customer subscription index' do
+    it "lists all of a customer's subscriptions" do
+      tea_1 = create(:tea)
+      tea_2 = create(:tea)
+      tea_3 = create(:tea)
+      customer_1 = create(:customer)
+      subscription_1 = create(:subscription, tea_id: tea_1.id, customer_id: customer_1.id, status: 0)
+      subscription_2 = create(:subscription, tea_id: tea_2.id, customer_id: customer_1.id, status: 0)
+      subscription_3 = create(:subscription, tea_id: tea_3.id, customer_id: customer_1.id, status: 0)
+
+      data_keys = [:id, :type, :attributes]
+      attribute_keys = [:title, :price, :status, :frequency, :customer_id, :tea_id, :tea_name]
+
+
+      get "/api/v1/customers/#{customer_1.id}/subscriptions"
+
+      subscriptions = JSON.parse(response.body, symbolize_names: true)
+    
+      expect(response).to be_successful
+      subscriptions[:data].each do |sub|
+        expect(sub.keys).to eq(data_keys)
+        expect(sub[:type]).to eq("subscription")
+        expect(sub[:attributes].keys).to eq(attribute_keys)  
+      end
+
+      expect(subscriptions[:data].first[:attributes][:title]).to eq(subscription_1.title)
+      expect(subscriptions[:data].first[:attributes][:price]).to eq(subscription_1.price.to_s)
+      expect(subscriptions[:data].first[:attributes][:status]).to eq(subscription_1.status)
+      expect(subscriptions[:data].first[:attributes][:frequency]).to eq(subscription_1.frequency)
+      expect(subscriptions[:data].first[:attributes][:customer_id]).to eq(subscription_1.customer_id)
+      expect(subscriptions[:data].first[:attributes][:tea_id]).to eq(tea_1.id)
+      expect(subscriptions[:data].first[:attributes][:tea_name]).to eq(tea_1.title)
+    end
+
+    it "returns a serialized empty array if the customer has no descriptions" do
+      customer_1 = create(:customer)
+
+      get "/api/v1/customers/#{customer_1.id}/subscriptions"
+
+      subscriptions = JSON.parse(response.body, symbolize_names: true)
+
+      expect(response).to be_successful
+      expect(subscriptions).to be_a(Hash)
+      expect(subscriptions).to have_key(:data)
+      expect(subscriptions[:data]).to be_a(Array)
+      expect(subscriptions[:data].count).to eq(0)
+    end
+
+    it "returns an error if the customer is not found" do
+      customer_1 = create(:customer)
+
+      get "/api/v1/customers/2/subscriptions"
+
+      error = JSON.parse(response.body, symbolize_names: true)
+  
+      expect(response).to_not be_successful
+      expect(error).to be_a(Hash)
+      expect(error[:errors].first.keys).to eq([:status, :title, :detail])
+      expect(error[:errors].first[:status]).to eq("404")
+      expect(error[:errors].first[:title]).to eq("Invalid Request")
+      expect(error[:errors].first[:detail]).to eq(["Couldn't find Customer with 'id'=2"])
     end
   end
 end
