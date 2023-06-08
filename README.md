@@ -200,6 +200,10 @@ Body:
   </pre>
 </details>  
 
+## Schema
+
+[Schema](app/assets/images/schema.png?raw=true)
+
 ## Contributors
 
 Matt Enyeart
