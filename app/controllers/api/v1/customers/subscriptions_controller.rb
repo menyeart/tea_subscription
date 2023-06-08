@@ -1,5 +1,4 @@
 class Api::V1::Customers::SubscriptionsController < ApplicationController
-
   def create
     subscription = Subscription.new(subscription_params)
     if subscription.save
@@ -23,10 +22,9 @@ class Api::V1::Customers::SubscriptionsController < ApplicationController
     render json: SubscriptionSerializer.new(customer.subscriptions), status: :ok
   end
 
-private
+  private
 
-def subscription_params
-  params.permit(:title, :price, :status, :frequency, :customer_id, :tea_id)
-end
-
+  def subscription_params
+    params.permit(:title, :price, :status, :frequency, :customer_id, :tea_id)
+  end
 end
